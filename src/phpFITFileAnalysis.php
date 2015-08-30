@@ -1006,7 +1006,7 @@ class phpFITFileAnalysis
                         $this->file_pointer += $this->defn_mesgs[$local_mesg_type]['total_size'];
                     }
                     
-                    break;
+                    return;
             }
         }
     }
