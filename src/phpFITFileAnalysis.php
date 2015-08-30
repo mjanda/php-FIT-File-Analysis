@@ -1929,9 +1929,11 @@ class phpFITFileAnalysis
             }
         }
         
-        $fg_cur = [];
-        $rg_cur = [];
+        $fg_summary = [];
+        $rg_summary = [];
         $combined = [];
+        $gears_array = [];
+        
         reset($fgc);
         reset($rgc);
         for ($i = $first_ts; $i < $last_ts; ++$i) {
@@ -1943,26 +1945,25 @@ class phpFITFileAnalysis
                     $fg = $fgc_tmp['front_gear'];
                 }
             }
-            $fg_cur[$i] = $fg;
+            $fg_summary[$fg] = isset($fg_summary[$fg]) ? $fg_summary[$fg] + 1 : 1;
             
             if ($i > $rgc_tmp['timestamp']) {
                 if (next($rgc) !== false) {
                     $rg = $rgc_tmp['rear_gear'];
                 }
             }
-            $rg_cur[$i] = $rg;
+            $rg_summary[$rg] = isset($rg_summary[$rg]) ? $rg_summary[$rg] + 1 : 1;
             
-            $combined[$i] = ['front_gear' => $fg, 'rear_gear' => $rg];
+            $combined[$fg][$rg] = isset($combined[$fg][$rg]) ? $combined[$fg][$rg] + 1 : 1;
+            
+            $gears_array[$i] = ['front_gear' => $fg, 'rear_gear' => $rg];
         }
         
-        $fg_summary = array_count_values($fg_cur);
         krsort($fg_summary);
-        
-        $rg_summary = array_count_values($rg_cur);
         krsort($rg_summary);
+        krsort($combined);
         
-        $output = ['front_gear_summary' => $fg_summary, 'rear_gear_summary' => $rg_summary, 'gears_array' => $combined];
-        var_dump($output);
+        $output = ['front_gear_summary' => $fg_summary, 'rear_gear_summary' => $rg_summary, 'combined_summary' => $combined, 'gears_array' => $gears_array];
         
         return $output;
     }
