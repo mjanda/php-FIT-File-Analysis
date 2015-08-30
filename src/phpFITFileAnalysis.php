@@ -848,11 +848,11 @@ class phpFITFileAnalysis
         // Process the file contents.
         $this->readHeader();
         $this->readDataRecords();
-        $this->oneElementArrays();
+        //$this->oneElementArrays();
         
         // Handle options.
-        $this->fixData($options);
-        $this->setUnits($options);
+        //$this->fixData($options);
+        //$this->setUnits($options);
     }
     
     /**
@@ -1005,6 +1005,8 @@ class phpFITFileAnalysis
                     } else {
                         $this->file_pointer += $this->defn_mesgs[$local_mesg_type]['total_size'];
                     }
+                    
+                    break;
             }
         }
     }
