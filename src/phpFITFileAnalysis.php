@@ -1837,6 +1837,137 @@ class phpFITFileAnalysis
     }
     
     /**
+     * Returns array of gear change information.
+     */
+    public function gearChanges()
+    {
+        /**
+         * Event enumerated values of interest
+         * 42 = front_gear_change
+         * 43 = rear_gear_change
+         */
+        $fgcek = array_keys($this->data_mesgs['event']['event'], 42);  // front gear change event keys
+        $rgcek = array_keys($this->data_mesgs['event']['event'], 43);  // rear gear change event keys
+        
+        /**
+         * gear_change_data (uint32)
+         * components:
+         *     rear_gear_num  00000000 00000000 00000000 11111111
+         *     rear_gear      00000000 00000000 11111111 00000000
+         *     front_gear_num 00000000 11111111 00000000 00000000
+         *     front_gear     11111111 00000000 00000000 00000000
+         * scale: 1, 1, 1, 1
+         * bits: 8, 8, 8, 8
+         */
+        
+        $fgc = [];  // front gear components
+        $front_gears = [];
+        foreach ($fgcek as $k) {
+            $fgc_tmp = [
+                'timestamp'   => $this->data_mesgs['event']['timestamp'][$k],
+                // 'data'        => $this->data_mesgs['event']['data'][$k],
+                // 'event_type'  => $this->data_mesgs['event']['event_type'][$k],
+                // 'event_group' => $this->data_mesgs['event']['event_group'][$k],
+                'rear_gear_num' => $this->data_mesgs['event']['data'][$k] & 255,
+                'rear_gear' => ($this->data_mesgs['event']['data'][$k] >> 8) & 255,
+                'front_gear_num' => ($this->data_mesgs['event']['data'][$k] >> 16) & 255,
+                'front_gear' => ($this->data_mesgs['event']['data'][$k] >> 24) & 255
+            ];
+            
+            $fgc[] = $fgc_tmp;
+            
+            if (!array_key_exists($fgc_tmp['front_gear_num'], $front_gears)) {
+                $front_gears[$fgc_tmp['front_gear_num']] = $fgc_tmp['front_gear'];
+            }
+        }
+        ksort($front_gears);
+        
+        $rgc = [];  // rear gear components
+        $rear_gears = [];
+        foreach ($rgcek as $k) {
+            $rgc_tmp = [
+                'timestamp'   => $this->data_mesgs['event']['timestamp'][$k],
+                // 'data'        => $this->data_mesgs['event']['data'][$k],
+                // 'event_type'  => $this->data_mesgs['event']['event_type'][$k],
+                // 'event_group' => $this->data_mesgs['event']['event_group'][$k],
+                'rear_gear_num' => $this->data_mesgs['event']['data'][$k] & 255,
+                'rear_gear' => ($this->data_mesgs['event']['data'][$k] >> 8) & 255,
+                'front_gear_num' => ($this->data_mesgs['event']['data'][$k] >> 16) & 255,
+                'front_gear' => ($this->data_mesgs['event']['data'][$k] >> 24) & 255
+            ];
+            
+            $rgc[] = $rgc_tmp;
+            
+            if (!array_key_exists($rgc_tmp['rear_gear_num'], $rear_gears)) {
+                $rear_gears[$rgc_tmp['rear_gear_num']] = $rgc_tmp['rear_gear'];
+            }
+        }
+        ksort($rear_gears);
+        
+        $timestamps = $this->data_mesgs['record']['timestamp'];
+        $first_ts = min($timestamps);  // first timestamp
+        $last_ts = max($timestamps);  // last timestamp
+        
+        $fg = 0;  // front gear at start of ride
+        $rg = 0;  // rear gear at start of ride
+        
+        if (isset($fgc[0]['timestamp'])) {
+            if ($first_ts == $fgc[0]['timestamp']) {
+                $fg = $fgc[0]['front_gear'];
+            }
+            else {
+                $fg = $fgc[0]['front_gear_num'] == 1 ? $front_gears[2] : $front_gears[1];
+            }
+        }
+        
+        if (isset($rgc[0]['timestamp'])) {
+            if ($first_ts == $rgc[0]['timestamp']) {
+                $rg = $rgc[0]['rear_gear'];
+            }
+            else {
+                $rg = $rgc[0]['rear_gear_num'] == min($rear_gears) ? $rear_gears[$rgc[0]['rear_gear_num'] + 1] : $rear_gears[$rgc[0]['rear_gear_num'] - 1];
+            }
+        }
+        
+        $fg_cur = [];
+        $rg_cur = [];
+        $combined = [];
+        reset($fgc);
+        reset($rgc);
+        for ($i = $first_ts; $i < $last_ts; ++$i) {
+            $fgc_tmp = current($fgc);
+            $rgc_tmp = current($rgc);
+            
+            if ($i > $fgc_tmp['timestamp']) {
+                if (next($fgc) !== false) {
+                    $fg = $fgc_tmp['front_gear'];
+                }
+            }
+            $fg_cur[$i] = $fg;
+            
+            if ($i > $rgc_tmp['timestamp']) {
+                if (next($rgc) !== false) {
+                    $rg = $rgc_tmp['rear_gear'];
+                }
+            }
+            $rg_cur[$i] = $rg;
+            
+            $combined[$i] = ['front_gear' => $fg, 'rear_gear' => $rg];
+        }
+        
+        $fg_summary = array_count_values($fg_cur);
+        krsort($fg_summary);
+        
+        $rg_summary = array_count_values($rg_cur);
+        krsort($rg_summary);
+        
+        $output = ['front_gear_summary' => $fg_summary, 'rear_gear_summary' => $rg_summary, 'gears_array' => $combined];
+        var_dump($output);
+        
+        return $output;
+    }
+    
+    /**
      * Outputs tables of information being listened for and found within the processed FIT file.
      */
     public function showDebugInfo()
