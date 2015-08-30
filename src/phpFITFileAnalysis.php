@@ -1001,12 +1001,12 @@ class phpFITFileAnalysis
                                     $this->data_mesgs['record'][$key][$timestamp] = $value;
                                 }
                             }
+                            
+                            return;
                         }
                     } else {
                         $this->file_pointer += $this->defn_mesgs[$local_mesg_type]['total_size'];
                     }
-                    
-                    return;
             }
         }
     }
